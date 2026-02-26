@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EventHub — Student Portal</title>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{--accent:#4f46e5;--bg:#0f0f13;--surface:#18181f;--surface2:#1e1e28;--border:#2a2a38;--text:#e8e8f0;--muted:#7070a0;--success:#22d3a5;--warning:#f59e0b;--danger:#f43f5e;--r:12px;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Sora',sans-serif;background:var(--bg);color:var(--text);height:100vh;overflow:hidden;}
+
+#login-screen{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:9999;background-image:radial-gradient(ellipse at 20% 50%,rgba(79,70,229,.15) 0%,transparent 60%);}
+#login-screen.hidden{display:none;}
+.lcard{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:48px 40px;width:420px;box-shadow:0 40px 80px rgba(0,0,0,.5),0 0 0 1px rgba(79,70,229,.2);}
+.llogo{font-family:'Space Mono',monospace;font-size:28px;color:var(--accent);margin-bottom:4px;}
+.lbadge{display:inline-block;background:rgba(79,70,229,.15);color:#a5b4fc;font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;border:1px solid rgba(79,70,229,.3);margin-bottom:24px;letter-spacing:1px;text-transform:uppercase;}
+.lcard h2{font-size:22px;font-weight:600;margin-bottom:6px;}
+.lcard .sub{color:var(--muted);font-size:13px;margin-bottom:28px;}
+.lf{margin-bottom:16px;}
+.lf label{display:block;font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:7px;}
+.lf input{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px 14px;color:var(--text);font-size:14px;font-family:inherit;transition:border-color .2s;}
+.lf input:focus{outline:none;border-color:var(--accent);}
+.btn-login{width:100%;padding:13px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-family:inherit;font-size:14px;font-weight:600;cursor:pointer;transition:background .2s;margin-top:8px;}
+.btn-login:hover{background:#4338ca;}
+.lhint{margin-top:18px;padding-top:18px;border-top:1px solid var(--border);font-size:12px;color:var(--muted);line-height:1.8;}
+.lhint strong{color:var(--text);}
+.lerr{color:var(--danger);font-size:12px;margin-bottom:10px;min-height:16px;}
+
+#app{display:none;height:100vh;}
+#app.active{display:flex;}
+.sb{width:240px;min-width:240px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto;}
+.sb-head{padding:24px 20px 18px;border-bottom:1px solid var(--border);}
+.sb-logo{font-family:'Space Mono',monospace;font-size:18px;color:var(--accent);}
+.sb-tag{font-size:11px;color:var(--muted);margin-top:3px;text-transform:uppercase;letter-spacing:1px;}
+.sb-nav{flex:1;padding:14px 10px;}
+.nl{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);padding:0 8px;margin:14px 0 5px;}
+.ni{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;color:var(--muted);cursor:pointer;font-size:13px;transition:all .2s;margin-bottom:2px;text-decoration:none;}
+.ni:hover{background:var(--surface2);color:var(--text);}
+.ni.active{background:rgba(79,70,229,.15);color:#a5b4fc;}
+.ni .ic{font-size:15px;width:18px;text-align:center;}
+.sb-foot{padding:14px 18px;border-top:1px solid var(--border);}
+.uc{display:flex;align-items:center;gap:10px;margin-bottom:11px;}
+.uav{width:34px;height:34px;background:rgba(79,70,229,.2);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;border:1px solid rgba(79,70,229,.3);}
+.un{font-size:13px;font-weight:600;}
+.ur{font-size:11px;color:var(--muted);}
+.btn-lo{width:100%;padding:8px;background:rgba(244,63,94,.1);color:var(--danger);border:1px solid rgba(244,63,94,.2);border-radius:6px;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer;}
+.btn-lo:hover{background:rgba(244,63,94,.2);}
+
+.main{flex:1;overflow-y:auto;padding:34px 38px;}
+.pg{display:none;animation:fu .28s ease;}
+.pg.active{display:block;}
+@keyframes fu{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
+.ph{margin-bottom:26px;}
+.ph h1{font-size:25px;font-weight:700;margin-bottom:4px;}
+.ph p{color:var(--muted);font-size:13px;}
+
+.srow{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:28px;}
+.sbox{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:18px;}
+.sbox .si{font-size:22px;margin-bottom:8px;}
+.sbox .sv{font-size:26px;font-weight:700;color:var(--accent);font-family:'Space Mono',monospace;}
+.sbox .sl{font-size:11px;color:var(--muted);margin-top:2px;}
+
+/* EVENT CARDS */
+.egrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:18px;}
+.ecard{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;transition:all .2s;}
+.ecard:hover{border-color:var(--accent);transform:translateY(-3px);box-shadow:0 10px 28px rgba(0,0,0,.3);}
+.ebanner{height:90px;display:flex;align-items:center;justify-content:center;font-size:34px;}
+.ba{background:linear-gradient(135deg,#1e1b4b,#312e81);}
+.bs{background:linear-gradient(135deg,#052e16,#14532d);}
+.bc{background:linear-gradient(135deg,#2d1b69,#5b21b6);}
+.bw{background:linear-gradient(135deg,#1c1814,#2d2520);}
+.bg_{background:linear-gradient(135deg,#1c1917,#292524);}
+.ebody{padding:14px 16px;}
+.etitle{font-size:14px;font-weight:600;margin-bottom:7px;line-height:1.3;}
+.emeta{font-size:12px;color:var(--muted);margin-bottom:3px;}
+.cbadge{display:inline-block;font-size:10px;font-weight:600;padding:2px 8px;border-radius:20px;margin-top:6px;background:rgba(79,70,229,.15);color:#a5b4fc;border:1px solid rgba(79,70,229,.2);}
+.sbadge{display:inline-block;font-size:10px;font-weight:600;padding:2px 8px;border-radius:20px;margin-left:5px;}
+.s-ap{background:rgba(34,211,165,.1);color:var(--success);border:1px solid rgba(34,211,165,.2);}
+.s-pe{background:rgba(245,158,11,.1);color:var(--warning);border:1px solid rgba(245,158,11,.2);}
+.s-re{background:rgba(244,63,94,.1);color:var(--danger);border:1px solid rgba(244,63,94,.2);}
+.btn-reg{width:100%;margin-top:10px;padding:9px;background:var(--accent);color:#fff;border:none;border-radius:7px;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;}
+.btn-reg:hover{background:#4338ca;}
+.btn-reg:disabled{background:rgba(34,211,165,.15);color:var(--success);border:1px solid rgba(34,211,165,.2);cursor:default;}
+.btn-unreg{padding:6px 13px;background:rgba(244,63,94,.1);color:var(--danger);border:1px solid rgba(244,63,94,.2);border-radius:6px;font-family:inherit;font-size:11px;font-weight:600;cursor:pointer;transition:all .2s;}
+.btn-unreg:hover{background:rgba(244,63,94,.2);}
+
+/* SEARCH */
+.sbar{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:11px 15px;color:var(--text);font-family:inherit;font-size:13px;margin-bottom:22px;transition:border-color .2s;}
+.sbar:focus{outline:none;border-color:var(--accent);}
+
+/* MY EVENTS */
+.melist{display:flex;flex-direction:column;gap:11px;}
+.merow{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:15px 18px;display:flex;align-items:center;justify-content:space-between;gap:14px;}
+.meinfo h4{font-size:14px;font-weight:600;margin-bottom:3px;}
+.meinfo p{font-size:12px;color:var(--muted);}
+
+/* CALENDAR */
+.cw{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:22px;}
+.cn{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;}
+.cn h3{font-size:15px;font-weight:600;font-family:'Space Mono',monospace;}
+.cb{background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:6px 13px;border-radius:6px;font-family:inherit;font-size:12px;cursor:pointer;transition:all .2s;}
+.cb:hover{border-color:var(--accent);color:#a5b4fc;}
+.cgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;}
+.cdn{text-align:center;font-size:11px;font-weight:700;color:var(--muted);padding:7px 0;}
+.cd{aspect-ratio:1;display:flex;align-items:center;justify-content:center;border-radius:7px;font-size:13px;cursor:pointer;border:1px solid transparent;color:var(--muted);}
+.cd:hover{border-color:var(--border);color:var(--text);}
+.cd.today{background:var(--accent);color:#fff;font-weight:700;}
+.cd.other{opacity:.3;}
+.cd.hev{border-color:rgba(79,70,229,.5);color:#a5b4fc;font-weight:600;background:rgba(79,70,229,.08);}
+
+/* FORM */
+.fc{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:26px;}
+.fg{display:flex;flex-direction:column;margin-bottom:16px;}
+.fg label{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px;}
+.fg select,.fg textarea{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;color:var(--text);font-family:inherit;font-size:13px;transition:border-color .2s;width:100%;}
+.fg select:focus,.fg textarea:focus{outline:none;border-color:var(--accent);}
+.fg select option{background:var(--surface2);}
+.fg textarea{resize:vertical;}
+.btn-sub{padding:11px 26px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;transition:background .2s;}
+.btn-sub:hover{background:#4338ca;}
+
+.toast{position:fixed;bottom:22px;right:22px;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:13px 18px;border-radius:9px;font-size:13px;z-index:9999;opacity:0;transform:translateY(8px);transition:all .25s;pointer-events:none;max-width:320px;}
+.toast.show{opacity:1;transform:translateY(0);}
+.toast.ok{border-color:rgba(34,211,165,.4);color:var(--success);}
+.toast.er{border-color:rgba(244,63,94,.4);color:var(--danger);}
+
+.emp{text-align:center;padding:36px 20px;color:var(--muted);font-size:13px;}
+.emt{font-size:32px;display:block;margin-bottom:10px;}
+</style>
+</head>
+<body>
+
+<div id="login-screen">
+  <div class="lcard">
+    <div class="llogo">EventHub</div>
+    <div class="lbadge">Student Portal</div>
+    <h2>Welcome back 👋</h2>
+    <p class="sub">Sign in to browse and register for campus events.</p>
+    <div class="lerr" id="lerr"></div>
+    <div class="lf"><label>Username</label><input type="text" id="un" placeholder="e.g. student" autocomplete="off"></div>
+    <div class="lf"><label>Password</label><input type="password" id="pw" placeholder="Password"></div>
+    <button class="btn-login" onclick="doLogin()">Sign In</button>
+    <div class="lhint"><strong>Demo:</strong> student / 123 &nbsp;|&nbsp; student2 / 123</div>
+  </div>
+</div>
+
+<div id="app">
+  <aside class="sb">
+    <div class="sb-head">
+      <div class="sb-logo">EventHub</div>
+      <div class="sb-tag">Student Portal</div>
+    </div>
+    <nav class="sb-nav">
+      <div class="nl">Menu</div>
+      <a class="ni active" onclick="nav('dash')"><span class="ic">📊</span> Dashboard</a>
+      <a class="ni" onclick="nav('browse')"><span class="ic">🎯</span> Browse Events</a>
+      <a class="ni" onclick="nav('cal')"><span class="ic">📆</span> Calendar</a>
+      <a class="ni" onclick="nav('mine')"><span class="ic">📝</span> My Registrations</a>
+      <a class="ni" onclick="nav('fb')"><span class="ic">💬</span> Feedback</a>
+      <div class="nl" style="margin-top:20px;">Other Portals</div>
+      <a class="ni" href="faculty-portal.html"><span class="ic">🏫</span> Faculty Portal</a>
+      <a class="ni" href="admin-portal.html"><span class="ic">⚙️</span> Admin Portal</a>
+    </nav>
+    <div class="sb-foot">
+      <div class="uc">
+        <div class="uav">🎓</div>
+        <div><div class="un" id="uname">—</div><div class="ur">Student</div></div>
+      </div>
+      <button class="btn-lo" onclick="doLogout()">Sign Out</button>
+    </div>
+  </aside>
+
+  <main class="main">
+
+    <!-- DASHBOARD -->
+    <div class="pg active" id="pg-dash">
+      <div class="ph"><h1>Dashboard</h1><p>Discover and register for upcoming campus events</p></div>
+      <div class="srow">
+        <div class="sbox"><div class="si">📅</div><div class="sv" id="s-ev">0</div><div class="sl">Total Events</div></div>
+        <div class="sbox"><div class="si">✅</div><div class="sv" id="s-reg">0</div><div class="sl">My Registrations</div></div>
+        <div class="sbox"><div class="si">🏆</div><div class="sv" id="s-ap">0</div><div class="sl">Approved Events</div></div>
+      </div>
+      <p style="font-size:14px;font-weight:600;margin-bottom:14px;">Featured Events</p>
+      <div class="egrid" id="feat-ev"></div>
+    </div>
+
+    <!-- BROWSE -->
+    <div class="pg" id="pg-browse">
+      <div class="ph"><h1>Browse Events</h1><p>Find and register for events that interest you</p></div>
+      <input class="sbar" id="search" placeholder="🔍  Search events by title or description…" oninput="renderBrowse()">
+      <div class="egrid" id="browse-ev"></div>
+    </div>
+
+    <!-- CALENDAR -->
+    <div class="pg" id="pg-cal">
+      <div class="ph"><h1>Event Calendar</h1><p>See all events by date</p></div>
+      <div class="cw">
+        <div class="cn">
+          <button class="cb" id="cal-prev">← Prev</button>
+          <h3 id="cal-lbl"></h3>
+          <button class="cb" id="cal-next">Next →</button>
+        </div>
+        <div class="cgrid" id="cal-wd"></div>
+        <div class="cgrid" id="cal-days"></div>
+      </div>
+    </div>
+
+    <!-- MY REGISTRATIONS -->
+    <div class="pg" id="pg-mine">
+      <div class="ph"><h1>My Registrations</h1><p>Events you have signed up for</p></div>
+      <div id="mine-cont"></div>
+    </div>
+
+    <!-- FEEDBACK -->
+    <div class="pg" id="pg-fb">
+      <div class="ph"><h1>Event Feedback</h1><p>Share your experience to help improve future events</p></div>
+      <div class="fc">
+        <div class="fg">
+          <label>Select Event *</label>
+          <select id="fb-ev"><option value="">-- Choose an event --</option></select>
+        </div>
+        <div class="fg">
+          <label>Rating *</label>
+          <select id="fb-rt">
+            <option value="">-- Select rating --</option>
+            <option value="5">⭐⭐⭐⭐⭐  Excellent</option>
+            <option value="4">⭐⭐⭐⭐  Good</option>
+            <option value="3">⭐⭐⭐  Average</option>
+            <option value="2">⭐⭐  Poor</option>
+            <option value="1">⭐  Very Poor</option>
+          </select>
+        </div>
+        <div class="fg">
+          <label>Your Feedback *</label>
+          <textarea id="fb-txt" rows="5" placeholder="Share your experience with this event…"></textarea>
+        </div>
+        <button class="btn-sub" onclick="submitFB()">Submit Feedback</button>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── STORAGE ──────────────────────────────────────────────────────────────────
+const SK={EV:'eventhub_events',US:'eventhub_users',RG:'eventhub_registrations',FB:'eventhub_feedback'};
+const gd=(k,d)=>{try{const r=localStorage.getItem(k);return r?JSON.parse(r):d;}catch{return d;}};
+const sd=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
+const gdA=(k)=>gd(k,[]);
+
+function seed(){
+  if(!localStorage.getItem(SK.EV)) sd(SK.EV,[
+    {id:'evt_001',title:'Annual Tech Summit 2026',date:'2026-03-15',time:'09:00',location:'Main Auditorium',description:'A comprehensive summit on the latest technology trends.',organizer:'faculty',organizerName:'Dr. Jane Faculty',category:'Academic',capacity:500,status:'pending',budget:50000,createdAt:'2026-02-01'},
+    {id:'evt_002',title:'Campus Fun Run 5K',date:'2026-03-22',time:'06:00',location:'Campus Grounds',description:'Join us for a fun and healthy community run around campus.',organizer:'faculty',organizerName:'Dr. Jane Faculty',category:'Sports',capacity:200,status:'approved',budget:20000,createdAt:'2026-02-05'},
+    {id:'evt_003',title:'Cultural Night 2026',date:'2026-04-10',time:'18:00',location:'University Theater',description:'Celebrate diversity with performances from student groups.',organizer:'faculty',organizerName:'Dr. Jane Faculty',category:'Cultural',capacity:300,status:'approved',budget:35000,createdAt:'2026-02-10'}
+  ]);
+  if(!localStorage.getItem(SK.US)) sd(SK.US,[
+    {username:'student',password:'123',role:'student',email:'student@uni.edu',name:'John Student',status:'active'},
+    {username:'student2',password:'123',role:'student',email:'student2@uni.edu',name:'Maria Santos',status:'active'},
+    {username:'faculty',password:'123',role:'faculty',email:'faculty@uni.edu',name:'Dr. Jane Faculty',status:'active'},
+    {username:'admin',password:'123',role:'admin',email:'admin@uni.edu',name:'Admin User',status:'active'}
+  ]);
+  if(!localStorage.getItem(SK.RG))sd(SK.RG,[]);
+  if(!localStorage.getItem(SK.FB))sd(SK.FB,[]);
+}
+
+// ── AUTH ──────────────────────────────────────────────────────────────────────
+let CU=null;
+function doLogin(){
+  const u=(document.getElementById('un').value||'').trim();
+  const p=(document.getElementById('pw').value||'').trim();
+  const err=document.getElementById('lerr');
+  err.textContent='';
+  if(!u||!p){err.textContent='Please fill both fields.';return;}
+  const user=gdA(SK.US).find(x=>x.username===u&&x.password===p&&x.role==='student');
+  if(!user){err.textContent='Invalid credentials or not a student account.';return;}
+  CU=user;
+  document.getElementById('login-screen').classList.add('hidden');
+  document.getElementById('app').classList.add('active');
+  document.getElementById('uname').textContent=CU.name;
+  renderDash();
+  renderCal();
+  populateFBDropdown();
+}
+function doLogout(){
+  CU=null;
+  document.getElementById('login-screen').classList.remove('hidden');
+  document.getElementById('app').classList.remove('active');
+  document.getElementById('un').value='';
+  document.getElementById('pw').value='';
+  document.getElementById('lerr').textContent='';
+}
+
+// ── NAV ───────────────────────────────────────────────────────────────────────
+function nav(p){
+  document.querySelectorAll('.pg').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll('.ni').forEach(x=>x.classList.remove('active'));
+  document.getElementById('pg-'+p)?.classList.add('active');
+  document.querySelector(`[onclick="nav('${p}')"]`)?.classList.add('active');
+  const actions={dash:renderDash,browse:renderBrowse,cal:renderCal,mine:renderMine,fb:populateFBDropdown};
+  actions[p]?.();
+}
+
+// ── HELPERS ───────────────────────────────────────────────────────────────────
+const myRegs=()=>gdA(SK.RG).filter(r=>r.studentId===CU?.username);
+const isReg=id=>myRegs().some(r=>r.eventId===id);
+const banCls=c=>({Academic:'ba',Sports:'bs',Cultural:'bc',Workshop:'bw'}[c]||'bg_');
+const banIco=c=>({Academic:'🎓',Sports:'🏃',Cultural:'🎭',Workshop:'🔧'}[c]||'📅');
+const sBadge=s=>{const m={approved:'s-ap',pending:'s-pe',rejected:'s-re'};return`<span class="sbadge ${m[s]||'s-pe'}">${s}</span>`;};
+
+function toast(msg,type='ok'){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.className='toast '+type+' show';
+  setTimeout(()=>t.classList.remove('show'),3000);
+}
+
+function eCard(ev){
+  const reg=isReg(ev.id);
+  return`<div class="ecard">
+    <div class="ebanner ${banCls(ev.category)}">${banIco(ev.category)}</div>
+    <div class="ebody">
+      <div class="etitle">${ev.title} ${sBadge(ev.status)}</div>
+      <div class="emeta">📅 ${ev.date} &nbsp; ⏰ ${ev.time}</div>
+      <div class="emeta">📍 ${ev.location}</div>
+      <div class="emeta">👤 ${ev.organizerName||ev.organizer}</div>
+      <span class="cbadge">${ev.category}</span>
+      <button class="btn-reg" ${reg?'disabled':''} onclick="doRegister('${ev.id}')">
+        ${reg?'✓ Registered':'Register Now'}
+      </button>
+    </div>
+  </div>`;
+}
+
+// ── DASHBOARD ─────────────────────────────────────────────────────────────────
+function renderDash(){
+  const evs=gdA(SK.EV);
+  const regs=myRegs();
+  document.getElementById('s-ev').textContent=evs.length;
+  document.getElementById('s-reg').textContent=regs.length;
+  document.getElementById('s-ap').textContent=evs.filter(e=>e.status==='approved').length;
+  const featured=evs.filter(e=>e.status==='approved').slice(0,3);
+  const el=document.getElementById('feat-ev');
+  el.innerHTML=featured.length?featured.map(eCard).join(''):`<div class="emp"><span class="emt">📭</span>No approved events yet.</div>`;
+}
+
+// ── BROWSE ────────────────────────────────────────────────────────────────────
+function renderBrowse(){
+  const term=(document.getElementById('search')?.value||'').toLowerCase();
+  let evs=gdA(SK.EV);
+  if(term)evs=evs.filter(e=>(e.title+e.description).toLowerCase().includes(term));
+  const el=document.getElementById('browse-ev');
+  el.innerHTML=evs.length?evs.map(eCard).join(''):`<div class="emp"><span class="emt">🔍</span>No events match your search.</div>`;
+}
+
+// ── REGISTER ──────────────────────────────────────────────────────────────────
+function doRegister(evId){
+  if(isReg(evId)){toast('Already registered for this event!','er');return;}
+  const evs=gdA(SK.EV);
+  const ev=evs.find(e=>e.id===evId);
+  if(!ev){toast('Event not found.','er');return;}
+  const regs=gdA(SK.RG);
+  regs.push({
+    id:'reg_'+Date.now(),
+    studentId:CU.username,
+    studentName:CU.name,
+    eventId:evId,
+    eventTitle:ev.title,
+    eventDate:ev.date,
+    registeredAt:new Date().toISOString()
+  });
+  sd(SK.RG,regs);
+  toast('✅ Successfully registered for '+ev.title,'ok');
+  renderDash();
+  renderBrowse();
+}
+
+// ── MY REGISTRATIONS ──────────────────────────────────────────────────────────
+function renderMine(){
+  const regs=myRegs();
+  const evs=gdA(SK.EV);
+  const el=document.getElementById('mine-cont');
+  if(!regs.length){
+    el.innerHTML=`<div class="emp"><span class="emt">📋</span>You haven't registered for any events yet.</div>`;
+    return;
+  }
+  const html=regs.map(r=>{
+    const ev=evs.find(e=>e.id===r.eventId);
+    return`<div class="merow">
+      <div class="meinfo">
+        <h4>${r.eventTitle} ${ev?sBadge(ev.status):''}</h4>
+        <p>📅 ${r.eventDate} &nbsp;|&nbsp; 📍 ${ev?ev.location:'—'} &nbsp;|&nbsp; Registered: ${(r.registeredAt||'').split('T')[0]}</p>
+      </div>
+      <button class="btn-unreg" onclick="doUnregister('${r.id}')">Cancel</button>
+    </div>`;
+  }).join('');
+  el.innerHTML=`<div class="melist">${html}</div>`;
+}
+function doUnregister(regId){
+  if(!confirm('Cancel this registration?'))return;
+  sd(SK.RG,gdA(SK.RG).filter(r=>r.id!==regId));
+  toast('Registration cancelled.','er');
+  renderMine();renderDash();
+}
+
+// ── FEEDBACK ──────────────────────────────────────────────────────────────────
+function populateFBDropdown(){
+  const evs=gdA(SK.EV);
+  const sel=document.getElementById('fb-ev');
+  sel.innerHTML='<option value="">-- Choose an event --</option>'+evs.map(e=>`<option value="${e.id}">${e.title}</option>`).join('');
+}
+function submitFB(){
+  const evId=(document.getElementById('fb-ev').value||'').trim();
+  const rating=(document.getElementById('fb-rt').value||'').trim();
+  const text=(document.getElementById('fb-txt').value||'').trim();
+  if(!evId||!rating||!text){toast('Please fill all feedback fields.','er');return;}
+  const fb=gdA(SK.FB);
+  fb.push({id:'fb_'+Date.now(),studentId:CU.username,studentName:CU.name,eventId:evId,rating:parseInt(rating),text,date:new Date().toISOString().split('T')[0]});
+  sd(SK.FB,fb);
+  toast('Feedback submitted! Thank you.','ok');
+  document.getElementById('fb-ev').selectedIndex=0;
+  document.getElementById('fb-rt').selectedIndex=0;
+  document.getElementById('fb-txt').value='';
+}
+
+// ── CALENDAR ──────────────────────────────────────────────────────────────────
+let calDt=new Date();
+function renderCal(){
+  const yr=calDt.getFullYear(),mo=calDt.getMonth();
+  document.getElementById('cal-lbl').textContent=calDt.toLocaleDateString('en-US',{month:'long',year:'numeric'});
+  document.getElementById('cal-wd').innerHTML=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(d=>`<div class="cdn">${d}</div>`).join('');
+  const evs=gdA(SK.EV);
+  const first=new Date(yr,mo,1).getDay();
+  const days=new Date(yr,mo+1,0).getDate();
+  const prev=new Date(yr,mo,0).getDate();
+  let html='';
+  for(let i=first-1;i>=0;i--)html+=`<div class="cd other">${prev-i}</div>`;
+  for(let d=1;d<=days;d++){
+    const ds=`${yr}-${String(mo+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const hasEv=evs.some(e=>e.date===ds);
+    const isToday=new Date().toDateString()===new Date(yr,mo,d).toDateString();
+    let cls='cd';if(isToday)cls+=' today';else if(hasEv)cls+=' hev';
+    html+=`<div class="${cls}">${d}</div>`;
+  }
+  const rem=42-(first+days);
+  for(let d=1;d<=rem;d++)html+=`<div class="cd other">${d}</div>`;
+  document.getElementById('cal-days').innerHTML=html;
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded',()=>{
+  seed();
+  document.getElementById('cal-prev').onclick=()=>{calDt.setMonth(calDt.getMonth()-1);renderCal();};
+  document.getElementById('cal-next').onclick=()=>{calDt.setMonth(calDt.getMonth()+1);renderCal();};
+  document.getElementById('pw').onkeydown=e=>{if(e.key==='Enter')doLogin();};
+  document.getElementById('un').onkeydown=e=>{if(e.key==='Enter')doLogin();};
+});
+</script>
+</body>
+</html>

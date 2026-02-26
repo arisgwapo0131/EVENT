@@ -1,0 +1,831 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EventHub — Faculty Portal</title>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --accent:#059669; --accent-h:#047857;
+  --bg:#0a0f0d; --surface:#111814; --surface2:#172019;
+  --border:#1f2e24; --text:#e2ede6; --muted:#607a68;
+  --success:#34d399; --warning:#f59e0b; --danger:#f43f5e; --blue:#60a5fa;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{height:100%;font-family:'Sora',sans-serif;background:var(--bg);color:var(--text);}
+body{overflow:hidden;}
+
+/* ── LOGIN ─────────────────────────────────────────────── */
+#login-screen{
+  position:fixed;inset:0;z-index:9999;
+  display:flex;align-items:center;justify-content:center;
+  background:var(--bg);
+  background-image:radial-gradient(ellipse at 30% 60%,rgba(5,150,105,.12) 0%,transparent 60%);
+}
+#login-screen.hidden{display:none;}
+.lcard{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:48px 40px;width:400px;box-shadow:0 30px 70px rgba(0,0,0,.5);}
+.llogo{font-family:'Space Mono',monospace;font-size:26px;color:var(--accent);margin-bottom:4px;}
+.lbadge{display:inline-block;background:rgba(5,150,105,.15);color:#6ee7b7;font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;border:1px solid rgba(5,150,105,.3);margin-bottom:22px;letter-spacing:1px;text-transform:uppercase;}
+.lcard h2{font-size:20px;font-weight:600;margin-bottom:5px;}
+.lsub{color:var(--muted);font-size:13px;margin-bottom:26px;}
+.lfield{margin-bottom:14px;}
+.lfield label{display:block;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;}
+.lfield input{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:11px 13px;color:var(--text);font-size:14px;font-family:inherit;}
+.lfield input:focus{outline:none;border-color:var(--accent);}
+.btn-login{display:block;width:100%;padding:13px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-family:inherit;font-size:14px;font-weight:600;cursor:pointer;margin-top:8px;}
+.btn-login:hover{background:var(--accent-h);}
+.lhint{margin-top:16px;padding-top:16px;border-top:1px solid var(--border);font-size:12px;color:var(--muted);line-height:1.8;}
+.lhint strong{color:var(--text);}
+.lerr{color:var(--danger);font-size:12px;margin-bottom:10px;min-height:16px;}
+
+/* ── APP SHELL ─────────────────────────────────────────── */
+#app{display:none;height:100vh;}
+#app.active{display:flex;}
+
+/* ── SIDEBAR ───────────────────────────────────────────── */
+.sb{width:230px;min-width:230px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;height:100vh;overflow-y:auto;}
+.sb-head{padding:22px 18px 16px;border-bottom:1px solid var(--border);}
+.sb-logo{font-family:'Space Mono',monospace;font-size:17px;color:var(--accent);}
+.sb-tag{font-size:11px;color:var(--muted);margin-top:3px;text-transform:uppercase;letter-spacing:1px;}
+.sb-nav{flex:1;padding:12px 8px;}
+.nl{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);padding:0 8px;margin:12px 0 4px;}
+.ni{display:flex;align-items:center;gap:9px;padding:9px 11px;border-radius:8px;color:var(--muted);cursor:pointer;font-size:13px;margin-bottom:1px;text-decoration:none;transition:background .15s,color .15s;}
+.ni:hover{background:var(--surface2);color:var(--text);}
+.ni.active{background:rgba(5,150,105,.18);color:#6ee7b7;}
+.ni .ic{font-size:15px;width:18px;text-align:center;}
+.sb-foot{padding:13px 16px;border-top:1px solid var(--border);}
+.uc{display:flex;align-items:center;gap:9px;margin-bottom:10px;}
+.uav{width:32px;height:32px;background:rgba(5,150,105,.2);border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:15px;border:1px solid rgba(5,150,105,.3);}
+.uname-d{font-size:13px;font-weight:600;}
+.urole-d{font-size:11px;color:var(--muted);}
+.btn-lo{width:100%;padding:8px;background:rgba(244,63,94,.1);color:var(--danger);border:1px solid rgba(244,63,94,.2);border-radius:6px;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer;}
+.btn-lo:hover{background:rgba(244,63,94,.2);}
+
+/* ── MAIN CONTENT ──────────────────────────────────────── */
+.main{flex:1;overflow-y:auto;padding:32px 36px;}
+.pg{display:none;}
+.pg.active{display:block;animation:fu .25s ease;}
+@keyframes fu{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+
+.ph{margin-bottom:24px;}
+.ph h1{font-size:24px;font-weight:700;margin-bottom:3px;}
+.ph p{color:var(--muted);font-size:13px;}
+
+/* ── STAT BOXES ────────────────────────────────────────── */
+.srow{display:flex;gap:14px;margin-bottom:26px;flex-wrap:wrap;}
+.sbox{flex:1;min-width:140px;background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:18px;}
+.sbox .si{font-size:20px;margin-bottom:8px;}
+.sbox .sv{font-size:25px;font-weight:700;color:var(--accent);font-family:'Space Mono',monospace;}
+.sbox .sl{font-size:11px;color:var(--muted);margin-top:2px;}
+
+/* ── TABLE ─────────────────────────────────────────────── */
+.tw{background:var(--surface);border:1px solid var(--border);border-radius:11px;overflow:hidden;}
+.tw-h{padding:16px 20px;border-bottom:1px solid var(--border);font-size:14px;font-weight:600;}
+table{width:100%;border-collapse:collapse;}
+thead{background:var(--surface2);}
+th{padding:10px 16px;text-align:left;font-size:11px;font-weight:600;color:var(--muted);border-bottom:1px solid var(--border);text-transform:uppercase;letter-spacing:.4px;}
+td{padding:10px 16px;font-size:13px;border-bottom:1px solid var(--border);}
+tbody tr:last-child td{border-bottom:none;}
+tbody tr:hover{background:rgba(255,255,255,.015);}
+.badge{display:inline-block;font-size:10px;font-weight:600;padding:2px 8px;border-radius:20px;}
+.b-ap{background:rgba(52,211,153,.1);color:var(--success);border:1px solid rgba(52,211,153,.2);}
+.b-pe{background:rgba(245,158,11,.1);color:var(--warning);border:1px solid rgba(245,158,11,.2);}
+.b-re{background:rgba(244,63,94,.1);color:var(--danger);border:1px solid rgba(244,63,94,.2);}
+.rc{display:inline-block;background:rgba(96,165,250,.1);color:var(--blue);border:1px solid rgba(96,165,250,.2);border-radius:20px;font-size:11px;font-weight:600;padding:2px 8px;}
+.bsm{padding:4px 10px;border-radius:5px;font-family:inherit;font-size:11px;font-weight:600;cursor:pointer;border:1px solid;margin-right:3px;}
+.bdel{background:rgba(244,63,94,.1);color:var(--danger);border-color:rgba(244,63,94,.2);}
+.bdel:hover{background:rgba(244,63,94,.2);}
+.mt{margin-top:20px;}
+.emp{text-align:center;padding:28px;color:var(--muted);font-size:13px;}
+
+/* ── FORM CARD ─────────────────────────────────────────── */
+.fc{background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:24px;margin-bottom:20px;}
+.fc h3{font-size:14px;font-weight:600;margin-bottom:18px;}
+/* Two-column form row */
+.frow{display:flex;gap:14px;margin-bottom:14px;}
+.frow .fg{flex:1;}
+/* Full width field */
+.fblock{margin-bottom:14px;}
+.fg label,.fblock label{display:block;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px;}
+.fg input,.fg select,.fblock input,.fblock select,.fblock textarea{
+  width:100%;background:var(--surface2);border:1px solid var(--border);
+  border-radius:8px;padding:10px 12px;color:var(--text);font-family:inherit;font-size:13px;
+}
+.fg input:focus,.fg select:focus,.fblock input:focus,.fblock select:focus,.fblock textarea:focus{outline:none;border-color:var(--accent);}
+.fg select option,.fblock select option{background:var(--surface2);}
+.fblock textarea{resize:vertical;}
+
+/* THE BUTTON — fully standalone, no grid parent */
+.btn-create{
+  display:inline-block;
+  margin-top:6px;
+  padding:12px 30px;
+  background:var(--accent);
+  color:#fff;
+  border:none;
+  border-radius:8px;
+  font-family:'Sora',sans-serif;
+  font-size:14px;
+  font-weight:600;
+  cursor:pointer;
+  letter-spacing:.2px;
+  transition:background .2s;
+  -webkit-appearance:none;
+  appearance:none;
+}
+.btn-create:hover{background:var(--accent-h);}
+.btn-create:active{transform:scale(.98);}
+
+/* ── CALENDAR ──────────────────────────────────────────── */
+.cw{background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:20px;}
+.cn{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;}
+.cn h3{font-size:15px;font-weight:600;font-family:'Space Mono',monospace;}
+.cb{background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:5px 12px;border-radius:6px;font-family:inherit;font-size:12px;cursor:pointer;}
+.cb:hover{border-color:var(--accent);color:var(--success);}
+.cgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;}
+.cdn{text-align:center;font-size:11px;font-weight:700;color:var(--muted);padding:6px 0;}
+.cd{aspect-ratio:1;display:flex;align-items:center;justify-content:center;border-radius:6px;font-size:12px;cursor:pointer;border:1px solid transparent;color:var(--muted);}
+.cd:hover{border-color:var(--border);color:var(--text);}
+.cd.today{background:var(--accent);color:#fff;font-weight:700;}
+.cd.other{opacity:.3;}
+.cd.hev{border-color:rgba(5,150,105,.5);color:var(--success);font-weight:600;background:rgba(5,150,105,.08);}
+
+/* ── TOAST ─────────────────────────────────────────────── */
+.toast{position:fixed;bottom:20px;right:20px;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:12px 18px;border-radius:9px;font-size:13px;z-index:99999;opacity:0;transform:translateY(8px);transition:all .25s;pointer-events:none;max-width:300px;}
+.toast.show{opacity:1;transform:translateY(0);}
+.toast.ok{border-color:rgba(52,211,153,.5);color:var(--success);}
+.toast.er{border-color:rgba(244,63,94,.5);color:var(--danger);}
+</style>
+</head>
+<body>
+
+<!-- ── LOGIN ──────────────────────────────────────────────── -->
+<div id="login-screen">
+  <div class="lcard">
+    <div class="llogo">EventHub</div>
+    <div class="lbadge">Faculty Portal</div>
+    <h2>Faculty Sign In</h2>
+    <p class="lsub">Manage events, volunteers, resources and venues.</p>
+    <div class="lerr" id="lerr"></div>
+    <div class="lfield"><label>Username</label><input type="text" id="un" placeholder="e.g. faculty" autocomplete="off"></div>
+    <div class="lfield"><label>Password</label><input type="password" id="pw" placeholder="Password"></div>
+    <button class="btn-login" id="btn-login">Sign In</button>
+    <div class="lhint"><strong>Demo:</strong> faculty / 123</div>
+  </div>
+</div>
+
+<!-- ── APP ────────────────────────────────────────────────── -->
+<div id="app">
+  <aside class="sb">
+    <div class="sb-head">
+      <div class="sb-logo">EventHub</div>
+      <div class="sb-tag">Faculty Portal</div>
+    </div>
+    <nav class="sb-nav">
+      <div class="nl">Menu</div>
+      <a class="ni active" onclick="nav('dash')"><span class="ic">📊</span> Dashboard</a>
+      <a class="ni" onclick="nav('events')"><span class="ic">📋</span> Manage Events</a>
+      <a class="ni" onclick="nav('regs')"><span class="ic">👥</span> Registrations</a>
+      <a class="ni" onclick="nav('vols')"><span class="ic">🙋</span> Volunteers</a>
+      <a class="ni" onclick="nav('res')"><span class="ic">📦</span> Resources</a>
+      <a class="ni" onclick="nav('ven')"><span class="ic">🏢</span> Venues</a>
+      <a class="ni" onclick="nav('cal')"><span class="ic">📆</span> Calendar</a>
+      <div class="nl" style="margin-top:18px;">Other Portals</div>
+      <a class="ni" href="student-portal.html"><span class="ic">🎓</span> Student Portal</a>
+      <a class="ni" href="admin-portal.html"><span class="ic">⚙️</span> Admin Portal</a>
+    </nav>
+    <div class="sb-foot">
+      <div class="uc">
+        <div class="uav">🏫</div>
+        <div><div class="uname-d" id="uname">—</div><div class="urole-d">Faculty</div></div>
+      </div>
+      <button class="btn-lo" id="btn-logout">Sign Out</button>
+    </div>
+  </aside>
+
+  <main class="main">
+
+    <!-- DASHBOARD -->
+    <div class="pg active" id="pg-dash">
+      <div class="ph"><h1>Faculty Dashboard</h1><p>Overview of your events and activities</p></div>
+      <div class="srow">
+        <div class="sbox"><div class="si">📅</div><div class="sv" id="f-tot">0</div><div class="sl">My Events</div></div>
+        <div class="sbox"><div class="si">✅</div><div class="sv" id="f-app">0</div><div class="sl">Approved</div></div>
+        <div class="sbox"><div class="si">⏳</div><div class="sv" id="f-pen">0</div><div class="sl">Pending</div></div>
+        <div class="sbox"><div class="si">👥</div><div class="sv" id="f-reg">0</div><div class="sl">Registrations</div></div>
+      </div>
+      <p style="font-size:14px;font-weight:600;margin-bottom:12px;">My Recent Events</p>
+      <div class="tw">
+        <table>
+          <thead><tr><th>Event</th><th>Date</th><th>Status</th><th>Registrations</th></tr></thead>
+          <tbody id="dash-tb"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- MANAGE EVENTS -->
+    <div class="pg" id="pg-events">
+      <div class="ph"><h1>Manage Events</h1><p>Create and manage your campus events</p></div>
+
+      <div class="fc">
+        <h3>➕ Create New Event</h3>
+
+        <div class="frow">
+          <div class="fg">
+            <label>Event Title *</label>
+            <input type="text" id="ev-title" placeholder="e.g. Tech Summit 2026">
+          </div>
+          <div class="fg">
+            <label>Category *</label>
+            <select id="ev-cat">
+              <option value="">-- Select Category --</option>
+              <option value="Academic">Academic</option>
+              <option value="Sports">Sports</option>
+              <option value="Cultural">Cultural</option>
+              <option value="Workshop">Workshop</option>
+              <option value="General">General</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="frow">
+          <div class="fg">
+            <label>Date *</label>
+            <input type="date" id="ev-date">
+          </div>
+          <div class="fg">
+            <label>Time *</label>
+            <input type="time" id="ev-time">
+          </div>
+        </div>
+
+        <div class="frow">
+          <div class="fg">
+            <label>Location *</label>
+            <input type="text" id="ev-loc" placeholder="e.g. Main Auditorium">
+          </div>
+          <div class="fg">
+            <label>Capacity *</label>
+            <input type="number" id="ev-cap" min="1" placeholder="e.g. 200">
+          </div>
+        </div>
+
+        <div class="fblock">
+          <label>Budget (₱)</label>
+          <input type="number" id="ev-bud" min="0" placeholder="0">
+        </div>
+
+        <div class="fblock">
+          <label>Description</label>
+          <textarea id="ev-desc" rows="3" placeholder="Describe your event…"></textarea>
+        </div>
+
+        <!-- BUTTON — completely outside any flex/grid container -->
+        <button class="btn-create" id="btn-create-event">Create Event</button>
+      </div>
+
+      <div class="tw mt">
+        <div class="tw-h">Your Events</div>
+        <table>
+          <thead><tr><th>Title</th><th>Date</th><th>Location</th><th>Category</th><th>Status</th><th>Registrations</th><th>Actions</th></tr></thead>
+          <tbody id="ev-tb"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- REGISTRATIONS -->
+    <div class="pg" id="pg-regs">
+      <div class="ph"><h1>Student Registrations</h1><p>Students who signed up for your events</p></div>
+      <div class="tw">
+        <table>
+          <thead><tr><th>Student</th><th>Event</th><th>Event Date</th><th>Registered On</th></tr></thead>
+          <tbody id="regs-tb"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- VOLUNTEERS -->
+    <div class="pg" id="pg-vols">
+      <div class="ph"><h1>Volunteer Management</h1><p>Assign volunteers to your events</p></div>
+      <div class="fc">
+        <h3>Assign Volunteer</h3>
+        <div class="frow">
+          <div class="fg"><label>Full Name *</label><input type="text" id="vn" placeholder="Full name"></div>
+          <div class="fg"><label>Email *</label><input type="email" id="ve" placeholder="email@example.com"></div>
+        </div>
+        <div class="frow">
+          <div class="fg"><label>Event *</label><select id="vev"><option value="">-- Select event --</option></select></div>
+          <div class="fg"><label>Task *</label><input type="text" id="vt" placeholder="e.g. Registration Desk"></div>
+        </div>
+        <button class="btn-create" id="btn-assign-vol">Assign Volunteer</button>
+      </div>
+      <div class="tw mt">
+        <div class="tw-h">Assigned Volunteers</div>
+        <table>
+          <thead><tr><th>Name</th><th>Email</th><th>Event</th><th>Task</th><th>Actions</th></tr></thead>
+          <tbody id="vol-tb"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- RESOURCES -->
+    <div class="pg" id="pg-res">
+      <div class="ph"><h1>Resources</h1><p>Track equipment and supplies for your events</p></div>
+      <div class="fc">
+        <h3>Add Resource</h3>
+        <div class="frow">
+          <div class="fg"><label>Resource Name *</label><input type="text" id="rn" placeholder="e.g. Projector"></div>
+          <div class="fg"><label>Type *</label>
+            <select id="rt">
+              <option value="">-- Select Type --</option>
+              <option value="Equipment">Equipment</option>
+              <option value="Supplies">Supplies</option>
+              <option value="Furniture">Furniture</option>
+              <option value="AV/Tech">AV/Tech</option>
+            </select>
+          </div>
+        </div>
+        <div class="frow">
+          <div class="fg"><label>Quantity *</label><input type="number" id="rq" min="1" placeholder="1"></div>
+          <div class="fg"><label>Event *</label><select id="rev"><option value="">-- Select event --</option></select></div>
+        </div>
+        <button class="btn-create" id="btn-add-res">Add Resource</button>
+      </div>
+      <div class="tw mt">
+        <div class="tw-h">Resources List</div>
+        <table>
+          <thead><tr><th>Name</th><th>Type</th><th>Qty</th><th>Event</th><th>Actions</th></tr></thead>
+          <tbody id="res-tb"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- VENUES -->
+    <div class="pg" id="pg-ven">
+      <div class="ph"><h1>Venue Reservations</h1><p>Reserve venues for your events</p></div>
+      <div class="fc">
+        <h3>Reserve Venue</h3>
+        <div class="frow">
+          <div class="fg"><label>Venue Name *</label><input type="text" id="vnn" placeholder="e.g. Main Hall"></div>
+          <div class="fg"><label>Event *</label><select id="vev2"><option value="">-- Select event --</option></select></div>
+        </div>
+        <div class="frow">
+          <div class="fg"><label>Capacity *</label><input type="number" id="vca" min="1" placeholder="200"></div>
+          <div class="fg"><label>Date *</label><input type="date" id="vda"></div>
+        </div>
+        <button class="btn-create" id="btn-reserve-ven">Reserve Venue</button>
+      </div>
+      <div class="tw mt">
+        <div class="tw-h">Reservations</div>
+        <table>
+          <thead><tr><th>Venue</th><th>Event</th><th>Date</th><th>Capacity</th><th>Actions</th></tr></thead>
+          <tbody id="ven-tb"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- CALENDAR -->
+    <div class="pg" id="pg-cal">
+      <div class="ph"><h1>Event Calendar</h1><p>Your events in calendar view</p></div>
+      <div class="cw">
+        <div class="cn">
+          <button class="cb" id="cal-prev">← Prev</button>
+          <h3 id="cal-lbl">—</h3>
+          <button class="cb" id="cal-next">Next →</button>
+        </div>
+        <div class="cgrid" id="cal-wd"></div>
+        <div class="cgrid" id="cal-days"></div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+// STORAGE
+// ═══════════════════════════════════════════════════════════
+const SK = {
+  EV:  'eventhub_events',
+  US:  'eventhub_users',
+  RG:  'eventhub_registrations',
+  VO:  'eventhub_volunteers',
+  RS:  'eventhub_resources',
+  VN:  'eventhub_venues'
+};
+
+function loadArr(key) {
+  try { const d = localStorage.getItem(key); return d ? JSON.parse(d) : []; }
+  catch(e) { return []; }
+}
+function saveArr(key, arr) {
+  localStorage.setItem(key, JSON.stringify(arr));
+}
+
+function seedData() {
+  if (!localStorage.getItem(SK.EV)) {
+    saveArr(SK.EV, [
+      {id:'evt_001',title:'Annual Tech Summit 2026',date:'2026-03-15',time:'09:00',location:'Main Auditorium',description:'Technology summit.',organizer:'faculty',organizerName:'Dr. Jane Faculty',category:'Academic',capacity:500,status:'approved',budget:50000,createdAt:'2026-02-01'},
+      {id:'evt_002',title:'Campus Fun Run 5K',date:'2026-03-22',time:'06:00',location:'Campus Grounds',description:'Community run.',organizer:'faculty',organizerName:'Dr. Jane Faculty',category:'Sports',capacity:200,status:'approved',budget:20000,createdAt:'2026-02-05'},
+      {id:'evt_003',title:'Cultural Night 2026',date:'2026-04-10',time:'18:00',location:'University Theater',description:'Cultural performances.',organizer:'faculty',organizerName:'Dr. Jane Faculty',category:'Cultural',capacity:300,status:'approved',budget:35000,createdAt:'2026-02-10'}
+    ]);
+  }
+  if (!localStorage.getItem(SK.US)) {
+    saveArr(SK.US, [
+      {username:'student', password:'123', role:'student', email:'student@uni.edu', name:'John Student', status:'active'},
+      {username:'student2',password:'123', role:'student', email:'student2@uni.edu',name:'Maria Santos', status:'active'},
+      {username:'faculty', password:'123', role:'faculty', email:'faculty@uni.edu', name:'Dr. Jane Faculty',status:'active'},
+      {username:'admin',   password:'123', role:'admin',   email:'admin@uni.edu',   name:'Admin User', status:'active'}
+    ]);
+  }
+  [SK.RG, SK.VO, SK.RS, SK.VN].forEach(k => { if (!localStorage.getItem(k)) saveArr(k, []); });
+}
+
+// ═══════════════════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════════════════
+let CU = null;  // current user
+
+function fieldVal(id) {
+  const el = document.getElementById(id);
+  return el ? el.value.trim() : '';
+}
+
+function clearFields() {
+  const ids = Array.from(arguments);
+  ids.forEach(function(id) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (el.tagName === 'SELECT') el.selectedIndex = 0;
+    else el.value = '';
+  });
+}
+
+function myEvents() {
+  return loadArr(SK.EV).filter(function(e) { return e.organizer === CU.username; });
+}
+
+function regCount(evId) {
+  return loadArr(SK.RG).filter(function(r) { return r.eventId === evId; }).length;
+}
+
+function statusBadge(s) {
+  var cls = {approved:'b-ap', pending:'b-pe', rejected:'b-re'}[s] || 'b-pe';
+  return '<span class="badge ' + cls + '">' + s + '</span>';
+}
+
+function showToast(msg, type) {
+  type = type || 'ok';
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast ' + type + ' show';
+  setTimeout(function() { t.classList.remove('show'); }, 3200);
+}
+
+function populateEventDropdowns() {
+  var evs = myEvents();
+  var opts = '<option value="">-- Select event --</option>' +
+    evs.map(function(e) { return '<option value="' + e.id + '">' + e.title + '</option>'; }).join('');
+  ['vev', 'rev', 'vev2'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.innerHTML = opts;
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
+// AUTH
+// ═══════════════════════════════════════════════════════════
+function doLogin() {
+  var u = fieldVal('un');
+  var p = fieldVal('pw');
+  var err = document.getElementById('lerr');
+  err.textContent = '';
+  if (!u || !p) { err.textContent = 'Please fill both fields.'; return; }
+  var users = loadArr(SK.US);
+  var user = null;
+  for (var i = 0; i < users.length; i++) {
+    if (users[i].username === u && users[i].password === p && users[i].role === 'faculty') {
+      user = users[i]; break;
+    }
+  }
+  if (!user) { err.textContent = 'Invalid credentials or not a faculty account.'; return; }
+  CU = user;
+  document.getElementById('login-screen').classList.add('hidden');
+  document.getElementById('app').classList.add('active');
+  document.getElementById('uname').textContent = CU.name;
+  populateEventDropdowns();
+  renderDash();
+}
+
+function doLogout() {
+  CU = null;
+  document.getElementById('login-screen').classList.remove('hidden');
+  document.getElementById('app').classList.remove('active');
+  document.getElementById('un').value = '';
+  document.getElementById('pw').value = '';
+  document.getElementById('lerr').textContent = '';
+}
+
+// ═══════════════════════════════════════════════════════════
+// NAVIGATION
+// ═══════════════════════════════════════════════════════════
+function nav(p) {
+  document.querySelectorAll('.pg').forEach(function(x) { x.classList.remove('active'); });
+  document.querySelectorAll('.ni').forEach(function(x) { x.classList.remove('active'); });
+  var pg = document.getElementById('pg-' + p);
+  if (pg) pg.classList.add('active');
+  var link = document.querySelector('[onclick="nav(\'' + p + '\')"]');
+  if (link) link.classList.add('active');
+
+  if (p === 'dash') renderDash();
+  else if (p === 'events') { populateEventDropdowns(); renderEvList(); }
+  else if (p === 'regs') renderRegs();
+  else if (p === 'vols') { populateEventDropdowns(); renderVols(); }
+  else if (p === 'res') { populateEventDropdowns(); renderResList(); }
+  else if (p === 'ven') { populateEventDropdowns(); renderVenList(); }
+  else if (p === 'cal') renderCal();
+}
+
+// ═══════════════════════════════════════════════════════════
+// DASHBOARD
+// ═══════════════════════════════════════════════════════════
+function renderDash() {
+  var evs = myEvents();
+  var myIds = evs.map(function(e) { return e.id; });
+  var allRegs = loadArr(SK.RG);
+  var totalRegs = allRegs.filter(function(r) { return myIds.indexOf(r.eventId) !== -1; }).length;
+
+  document.getElementById('f-tot').textContent = evs.length;
+  document.getElementById('f-app').textContent = evs.filter(function(e){ return e.status==='approved'; }).length;
+  document.getElementById('f-pen').textContent = evs.filter(function(e){ return e.status==='pending'; }).length;
+  document.getElementById('f-reg').textContent = totalRegs;
+
+  var tb = document.getElementById('dash-tb');
+  if (!evs.length) {
+    tb.innerHTML = '<tr><td colspan="4" class="emp">No events yet. Go to Manage Events to create one.</td></tr>';
+    return;
+  }
+  tb.innerHTML = evs.slice(0,6).map(function(e) {
+    return '<tr><td><strong>' + e.title + '</strong></td><td>' + e.date + '</td><td>' +
+      statusBadge(e.status) + '</td><td><span class="rc">' + regCount(e.id) + '/' + e.capacity + '</span></td></tr>';
+  }).join('');
+}
+
+// ═══════════════════════════════════════════════════════════
+// CREATE EVENT  ← THE CORE FIX
+// ═══════════════════════════════════════════════════════════
+function createEvent() {
+  var title = fieldVal('ev-title');
+  var cat   = fieldVal('ev-cat');
+  var date  = fieldVal('ev-date');
+  var time  = fieldVal('ev-time');
+  var loc   = fieldVal('ev-loc');
+  var cap   = fieldVal('ev-cap');
+
+  if (!title)             { showToast('Event title is required.', 'er'); return; }
+  if (!cat)               { showToast('Please select a category.', 'er'); return; }
+  if (!date)              { showToast('Please select a date.', 'er'); return; }
+  if (!time)              { showToast('Please select a time.', 'er'); return; }
+  if (!loc)               { showToast('Location is required.', 'er'); return; }
+  if (!cap || parseInt(cap) < 1) { showToast('Please enter a valid capacity.', 'er'); return; }
+
+  var bud = fieldVal('ev-bud');
+  var desc = document.getElementById('ev-desc').value.trim();
+
+  var newEv = {
+    id: 'evt_' + Date.now(),
+    title: title,
+    category: cat,
+    date: date,
+    time: time,
+    location: loc,
+    capacity: parseInt(cap),
+    budget: bud ? parseInt(bud) : 0,
+    description: desc,
+    organizer: CU.username,
+    organizerName: CU.name,
+    status: 'pending',
+    createdAt: new Date().toISOString().split('T')[0]
+  };
+
+  var evs = loadArr(SK.EV);
+  evs.push(newEv);
+  saveArr(SK.EV, evs);
+
+  showToast('✅ Event created! Pending admin approval.', 'ok');
+  clearFields('ev-title', 'ev-date', 'ev-time', 'ev-loc', 'ev-cap', 'ev-bud', 'ev-desc');
+  document.getElementById('ev-cat').selectedIndex = 0;
+  renderEvList();
+  populateEventDropdowns();
+  renderDash();
+}
+
+function renderEvList() {
+  var evs = myEvents();
+  var tb = document.getElementById('ev-tb');
+  if (!evs.length) {
+    tb.innerHTML = '<tr><td colspan="7" class="emp">No events yet. Create one above.</td></tr>';
+    return;
+  }
+  tb.innerHTML = evs.map(function(e) {
+    return '<tr><td><strong>' + e.title + '</strong></td><td>' + e.date + '</td><td>' + e.location +
+      '</td><td>' + e.category + '</td><td>' + statusBadge(e.status) + '</td><td><span class="rc">' +
+      regCount(e.id) + '/' + e.capacity + '</span></td><td>' +
+      '<button class="bsm bdel" onclick="delEv(\'' + e.id + '\')">Delete</button></td></tr>';
+  }).join('');
+}
+
+function delEv(id) {
+  if (!confirm('Delete this event?')) return;
+  saveArr(SK.EV, loadArr(SK.EV).filter(function(e) { return e.id !== id; }));
+  showToast('Event deleted.', 'er');
+  renderEvList(); populateEventDropdowns(); renderDash();
+}
+
+// ═══════════════════════════════════════════════════════════
+// REGISTRATIONS
+// ═══════════════════════════════════════════════════════════
+function renderRegs() {
+  var myIds = myEvents().map(function(e) { return e.id; });
+  var regs = loadArr(SK.RG).filter(function(r) { return myIds.indexOf(r.eventId) !== -1; });
+  var tb = document.getElementById('regs-tb');
+  if (!regs.length) {
+    tb.innerHTML = '<tr><td colspan="4" class="emp">No student registrations yet.</td></tr>';
+    return;
+  }
+  tb.innerHTML = regs.map(function(r) {
+    return '<tr><td>' + r.studentName + '</td><td>' + r.eventTitle + '</td><td>' + r.eventDate + '</td><td>' +
+      (r.registeredAt || '').split('T')[0] + '</td></tr>';
+  }).join('');
+}
+
+// ═══════════════════════════════════════════════════════════
+// VOLUNTEERS
+// ═══════════════════════════════════════════════════════════
+function assignVol() {
+  var name  = fieldVal('vn');
+  var email = fieldVal('ve');
+  var evId  = fieldVal('vev');
+  var task  = fieldVal('vt');
+  if (!name || !email || !evId || !task) { showToast('Please fill all volunteer fields.', 'er'); return; }
+  var ev = loadArr(SK.EV).find(function(e) { return e.id === evId; });
+  var vols = loadArr(SK.VO);
+  vols.push({id:'vol_'+Date.now(), name:name, email:email, eventId:evId, eventTitle:ev?ev.title:evId, task:task, assignedBy:CU.username});
+  saveArr(SK.VO, vols);
+  showToast('Volunteer assigned!', 'ok');
+  clearFields('vn', 've', 'vt');
+  document.getElementById('vev').selectedIndex = 0;
+  renderVols();
+}
+
+function renderVols() {
+  var myIds = myEvents().map(function(e) { return e.id; });
+  var vols = loadArr(SK.VO).filter(function(v) { return myIds.indexOf(v.eventId) !== -1; });
+  var tb = document.getElementById('vol-tb');
+  if (!vols.length) { tb.innerHTML = '<tr><td colspan="5" class="emp">No volunteers assigned yet.</td></tr>'; return; }
+  tb.innerHTML = vols.map(function(v) {
+    return '<tr><td>' + v.name + '</td><td>' + v.email + '</td><td>' + v.eventTitle + '</td><td>' + v.task +
+      '</td><td><button class="bsm bdel" onclick="delVol(\'' + v.id + '\')">Remove</button></td></tr>';
+  }).join('');
+}
+
+function delVol(id) {
+  if (!confirm('Remove volunteer?')) return;
+  saveArr(SK.VO, loadArr(SK.VO).filter(function(v) { return v.id !== id; }));
+  showToast('Volunteer removed.', 'er'); renderVols();
+}
+
+// ═══════════════════════════════════════════════════════════
+// RESOURCES
+// ═══════════════════════════════════════════════════════════
+function addResource() {
+  var name = fieldVal('rn');
+  var type = fieldVal('rt');
+  var qty  = fieldVal('rq');
+  var evId = fieldVal('rev');
+  if (!name || !type || !qty || !evId) { showToast('Please fill all resource fields.', 'er'); return; }
+  var ev = loadArr(SK.EV).find(function(e) { return e.id === evId; });
+  var res = loadArr(SK.RS);
+  res.push({id:'res_'+Date.now(), name:name, type:type, qty:parseInt(qty), eventId:evId, eventTitle:ev?ev.title:evId, addedBy:CU.username});
+  saveArr(SK.RS, res);
+  showToast('Resource added!', 'ok');
+  clearFields('rn', 'rq');
+  document.getElementById('rt').selectedIndex = 0;
+  document.getElementById('rev').selectedIndex = 0;
+  renderResList();
+}
+
+function renderResList() {
+  var myIds = myEvents().map(function(e) { return e.id; });
+  var res = loadArr(SK.RS).filter(function(r) { return myIds.indexOf(r.eventId) !== -1; });
+  var tb = document.getElementById('res-tb');
+  if (!res.length) { tb.innerHTML = '<tr><td colspan="5" class="emp">No resources added yet.</td></tr>'; return; }
+  tb.innerHTML = res.map(function(r) {
+    return '<tr><td>' + r.name + '</td><td>' + r.type + '</td><td>' + r.qty + '</td><td>' + r.eventTitle +
+      '</td><td><button class="bsm bdel" onclick="delRes(\'' + r.id + '\')">Remove</button></td></tr>';
+  }).join('');
+}
+
+function delRes(id) {
+  if (!confirm('Remove resource?')) return;
+  saveArr(SK.RS, loadArr(SK.RS).filter(function(r) { return r.id !== id; }));
+  showToast('Resource removed.', 'er'); renderResList();
+}
+
+// ═══════════════════════════════════════════════════════════
+// VENUES
+// ═══════════════════════════════════════════════════════════
+function reserveVenue() {
+  var name = fieldVal('vnn');
+  var evId = fieldVal('vev2');
+  var cap  = fieldVal('vca');
+  var date = fieldVal('vda');
+  if (!name || !evId || !cap || !date) { showToast('Please fill all venue fields.', 'er'); return; }
+  var ev = loadArr(SK.EV).find(function(e) { return e.id === evId; });
+  var ven = loadArr(SK.VN);
+  ven.push({id:'ven_'+Date.now(), name:name, eventId:evId, eventTitle:ev?ev.title:evId, capacity:parseInt(cap), date:date, reservedBy:CU.username});
+  saveArr(SK.VN, ven);
+  showToast('Venue reserved!', 'ok');
+  clearFields('vnn', 'vca', 'vda');
+  document.getElementById('vev2').selectedIndex = 0;
+  renderVenList();
+}
+
+function renderVenList() {
+  var myIds = myEvents().map(function(e) { return e.id; });
+  var ven = loadArr(SK.VN).filter(function(v) { return myIds.indexOf(v.eventId) !== -1; });
+  var tb = document.getElementById('ven-tb');
+  if (!ven.length) { tb.innerHTML = '<tr><td colspan="5" class="emp">No venues reserved yet.</td></tr>'; return; }
+  tb.innerHTML = ven.map(function(v) {
+    return '<tr><td>' + v.name + '</td><td>' + v.eventTitle + '</td><td>' + v.date + '</td><td>' + v.capacity +
+      '</td><td><button class="bsm bdel" onclick="delVen(\'' + v.id + '\')">Cancel</button></td></tr>';
+  }).join('');
+}
+
+function delVen(id) {
+  if (!confirm('Cancel reservation?')) return;
+  saveArr(SK.VN, loadArr(SK.VN).filter(function(v) { return v.id !== id; }));
+  showToast('Reservation cancelled.', 'er'); renderVenList();
+}
+
+// ═══════════════════════════════════════════════════════════
+// CALENDAR
+// ═══════════════════════════════════════════════════════════
+var calDt = new Date();
+function renderCal() {
+  var yr = calDt.getFullYear(), mo = calDt.getMonth();
+  document.getElementById('cal-lbl').textContent = calDt.toLocaleDateString('en-US', {month:'long', year:'numeric'});
+  document.getElementById('cal-wd').innerHTML = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']
+    .map(function(d){ return '<div class="cdn">' + d + '</div>'; }).join('');
+  var evs = myEvents();
+  var first = new Date(yr, mo, 1).getDay();
+  var days  = new Date(yr, mo+1, 0).getDate();
+  var prev  = new Date(yr, mo, 0).getDate();
+  var html  = '';
+  for (var i = first-1; i >= 0; i--) html += '<div class="cd other">' + (prev-i) + '</div>';
+  for (var d = 1; d <= days; d++) {
+    var ds = yr + '-' + String(mo+1).padStart(2,'0') + '-' + String(d).padStart(2,'0');
+    var hasEv = evs.some(function(e){ return e.date === ds; });
+    var isToday = new Date().toDateString() === new Date(yr,mo,d).toDateString();
+    var cls = 'cd' + (isToday ? ' today' : (hasEv ? ' hev' : ''));
+    html += '<div class="' + cls + '">' + d + '</div>';
+  }
+  var rem = 42 - (first + days);
+  for (var x = 1; x <= rem; x++) html += '<div class="cd other">' + x + '</div>';
+  document.getElementById('cal-days').innerHTML = html;
+}
+
+// ═══════════════════════════════════════════════════════════
+// INIT — wire everything via addEventListener, zero inline risk
+// ═══════════════════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', function() {
+  seedData();
+
+  // Login
+  document.getElementById('btn-login').addEventListener('click', doLogin);
+  document.getElementById('pw').addEventListener('keydown', function(e){ if(e.key==='Enter') doLogin(); });
+  document.getElementById('un').addEventListener('keydown', function(e){ if(e.key==='Enter') doLogin(); });
+
+  // Logout
+  document.getElementById('btn-logout').addEventListener('click', doLogout);
+
+  // Create Event — wired here in JS, not just inline onclick
+  document.getElementById('btn-create-event').addEventListener('click', function() {
+    createEvent();
+  });
+
+  // Volunteers / Resources / Venues
+  document.getElementById('btn-assign-vol').addEventListener('click', assignVol);
+  document.getElementById('btn-add-res').addEventListener('click', addResource);
+  document.getElementById('btn-reserve-ven').addEventListener('click', reserveVenue);
+
+  // Calendar
+  document.getElementById('cal-prev').addEventListener('click', function(){ calDt.setMonth(calDt.getMonth()-1); renderCal(); });
+  document.getElementById('cal-next').addEventListener('click', function(){ calDt.setMonth(calDt.getMonth()+1); renderCal(); });
+});
+</script>
+</body>
+</html>

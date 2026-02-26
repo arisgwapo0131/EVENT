@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EventHub — Admin Portal</title>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{--accent:#dc2626;--bg:#0c0a0a;--surface:#151010;--surface2:#1c1515;--border:#2a1f1f;--text:#f0e8e8;--muted:#7a6060;--success:#34d399;--warning:#f59e0b;--danger:#f43f5e;--blue:#60a5fa;--purple:#a78bfa;--r:12px;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Sora',sans-serif;background:var(--bg);color:var(--text);height:100vh;overflow:hidden;}
+
+#login-screen{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:9999;background-image:radial-gradient(ellipse at 70% 40%,rgba(220,38,38,.1) 0%,transparent 60%);}
+#login-screen.hidden{display:none;}
+.lcard{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:48px 40px;width:420px;box-shadow:0 40px 80px rgba(0,0,0,.6);}
+.llogo{font-family:'Space Mono',monospace;font-size:28px;color:var(--accent);margin-bottom:4px;}
+.lbadge{display:inline-block;background:rgba(220,38,38,.15);color:#fca5a5;font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;border:1px solid rgba(220,38,38,.3);margin-bottom:24px;letter-spacing:1px;text-transform:uppercase;}
+.lcard h2{font-size:22px;font-weight:600;margin-bottom:6px;}
+.lcard .sub{color:var(--muted);font-size:13px;margin-bottom:28px;}
+.lf{margin-bottom:16px;}
+.lf label{display:block;font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:7px;}
+.lf input{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px 14px;color:var(--text);font-size:14px;font-family:inherit;transition:border-color .2s;}
+.lf input:focus{outline:none;border-color:var(--accent);}
+.btn-login{width:100%;padding:13px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-family:inherit;font-size:14px;font-weight:600;cursor:pointer;transition:background .2s;margin-top:8px;}
+.btn-login:hover{background:#b91c1c;}
+.lhint{margin-top:18px;padding-top:18px;border-top:1px solid var(--border);font-size:12px;color:var(--muted);line-height:1.8;}
+.lhint strong{color:var(--text);}
+.lerr{color:var(--danger);font-size:12px;margin-bottom:10px;min-height:16px;}
+
+#app{display:none;height:100vh;}
+#app.active{display:flex;}
+.sb{width:240px;min-width:240px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto;}
+.sb-head{padding:24px 20px 18px;border-bottom:1px solid var(--border);}
+.sb-logo{font-family:'Space Mono',monospace;font-size:18px;color:var(--accent);}
+.sb-tag{font-size:11px;color:var(--muted);margin-top:3px;text-transform:uppercase;letter-spacing:1px;}
+.sb-nav{flex:1;padding:14px 10px;}
+.nl{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);padding:0 8px;margin:14px 0 5px;}
+.ni{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;color:var(--muted);cursor:pointer;font-size:13px;transition:all .2s;margin-bottom:2px;text-decoration:none;}
+.ni:hover{background:var(--surface2);color:var(--text);}
+.ni.active{background:rgba(220,38,38,.15);color:#fca5a5;}
+.ni .ic{font-size:15px;width:18px;text-align:center;}
+.sb-foot{padding:14px 18px;border-top:1px solid var(--border);}
+.uc{display:flex;align-items:center;gap:10px;margin-bottom:11px;}
+.uav{width:34px;height:34px;background:rgba(220,38,38,.2);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;border:1px solid rgba(220,38,38,.3);}
+.un{font-size:13px;font-weight:600;}
+.ur{font-size:11px;color:var(--muted);}
+.btn-lo{width:100%;padding:8px;background:rgba(244,63,94,.1);color:var(--danger);border:1px solid rgba(244,63,94,.2);border-radius:6px;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer;}
+.btn-lo:hover{background:rgba(244,63,94,.2);}
+
+.main{flex:1;overflow-y:auto;padding:34px 38px;}
+.pg{display:none;animation:fu .28s ease;}
+.pg.active{display:block;}
+@keyframes fu{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
+.ph{margin-bottom:26px;display:flex;justify-content:space-between;align-items:flex-start;}
+.ph-t h1{font-size:25px;font-weight:700;margin-bottom:4px;}
+.ph-t p{color:var(--muted);font-size:13px;}
+.btn-rf{padding:8px 15px;background:rgba(220,38,38,.1);color:#fca5a5;border:1px solid rgba(220,38,38,.2);border-radius:8px;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;}
+.btn-rf:hover{background:rgba(220,38,38,.2);}
+
+.srow{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:28px;}
+.sbox{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:18px;border-left:3px solid var(--sc,var(--accent));}
+.sbox .si{font-size:22px;margin-bottom:8px;}
+.sbox .sv{font-size:26px;font-weight:700;font-family:'Space Mono',monospace;}
+.sbox .sl{font-size:11px;color:var(--muted);margin-top:2px;text-transform:uppercase;letter-spacing:.4px;}
+
+.tw{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:22px;}
+.tw-h{padding:17px 22px;border-bottom:1px solid var(--border);font-size:14px;font-weight:600;}
+table{width:100%;border-collapse:collapse;}
+thead{background:var(--surface2);}
+th{padding:11px 18px;text-align:left;font-size:11px;font-weight:600;color:var(--muted);border-bottom:1px solid var(--border);text-transform:uppercase;letter-spacing:.4px;}
+td{padding:11px 18px;font-size:13px;border-bottom:1px solid var(--border);}
+tbody tr:last-child td{border-bottom:none;}
+tbody tr:hover{background:rgba(255,255,255,.015);}
+
+.badge{display:inline-block;font-size:10px;font-weight:600;padding:3px 9px;border-radius:20px;}
+.b-ap{background:rgba(52,211,153,.1);color:var(--success);border:1px solid rgba(52,211,153,.2);}
+.b-pe{background:rgba(245,158,11,.1);color:var(--warning);border:1px solid rgba(245,158,11,.2);}
+.b-re{background:rgba(244,63,94,.1);color:var(--danger);border:1px solid rgba(244,63,94,.2);}
+.b-st{background:rgba(167,139,250,.1);color:var(--purple);border:1px solid rgba(167,139,250,.2);}
+.b-fa{background:rgba(52,211,153,.1);color:var(--success);border:1px solid rgba(52,211,153,.2);}
+.b-ad{background:rgba(220,38,38,.1);color:#fca5a5;border:1px solid rgba(220,38,38,.2);}
+.b-bl{background:rgba(96,165,250,.1);color:var(--blue);border:1px solid rgba(96,165,250,.2);}
+
+.bsm{padding:5px 11px;border-radius:6px;font-family:inherit;font-size:11px;font-weight:600;cursor:pointer;transition:all .2s;border:1px solid;margin-right:4px;}
+.bap{background:rgba(52,211,153,.1);color:var(--success);border-color:rgba(52,211,153,.2);}
+.bap:hover{background:rgba(52,211,153,.2);}
+.brj{background:rgba(244,63,94,.1);color:var(--danger);border-color:rgba(244,63,94,.2);}
+.brj:hover{background:rgba(244,63,94,.2);}
+.bdl{background:rgba(220,38,38,.1);color:#fca5a5;border-color:rgba(220,38,38,.2);}
+.bdl:hover{background:rgba(220,38,38,.2);}
+
+/* FILTER */
+.frow{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;}
+.fb{padding:6px 14px;background:var(--surface);border:1px solid var(--border);border-radius:20px;font-family:inherit;font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;transition:all .2s;}
+.fb:hover{border-color:var(--accent);color:#fca5a5;}
+.fb.on{background:rgba(220,38,38,.15);border-color:rgba(220,38,38,.4);color:#fca5a5;}
+
+/* REPORTS */
+.rgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;}
+.rc-{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:22px;}
+.rc- h4{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px;}
+.ri{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--border);font-size:13px;}
+.ri:last-child{border-bottom:none;}
+.rv{font-family:'Space Mono',monospace;font-weight:700;color:var(--accent);}
+
+.toast{position:fixed;bottom:22px;right:22px;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:13px 18px;border-radius:9px;font-size:13px;z-index:9999;opacity:0;transform:translateY(8px);transition:all .25s;pointer-events:none;}
+.toast.show{opacity:1;transform:translateY(0);}
+.toast.ok{border-color:rgba(52,211,153,.4);color:var(--success);}
+.toast.er{border-color:rgba(244,63,94,.4);color:var(--danger);}
+.toast.wn{border-color:rgba(245,158,11,.4);color:var(--warning);}
+
+.emp{text-align:center;padding:32px 20px;color:var(--muted);font-size:13px;}
+.mt{margin-top:22px;}
+.cnt{display:inline-block;background:rgba(220,38,38,.1);color:#fca5a5;border:1px solid rgba(220,38,38,.2);border-radius:20px;padding:2px 8px;font-size:11px;font-weight:600;}
+code{font-family:'Space Mono',monospace;font-size:12px;color:var(--muted);}
+</style>
+</head>
+<body>
+
+<div id="login-screen">
+  <div class="lcard">
+    <div class="llogo">EventHub</div>
+    <div class="lbadge">Admin Portal</div>
+    <h2>Administrator Access</h2>
+    <p class="sub">Full system visibility — view, approve, and manage everything.</p>
+    <div class="lerr" id="lerr"></div>
+    <div class="lf"><label>Username</label><input type="text" id="un" placeholder="admin" autocomplete="off"></div>
+    <div class="lf"><label>Password</label><input type="password" id="pw" placeholder="Password"></div>
+    <button class="btn-login" onclick="doLogin()">Sign In</button>
+    <div class="lhint"><strong>Demo:</strong> admin / 123</div>
+  </div>
+</div>
+
+<div id="app">
+  <aside class="sb">
+    <div class="sb-head">
+      <div class="sb-logo">EventHub</div>
+      <div class="sb-tag">Admin Portal</div>
+    </div>
+    <nav class="sb-nav">
+      <div class="nl">Menu</div>
+      <a class="ni active" onclick="nav('dash')"><span class="ic">📊</span> Dashboard</a>
+      <a class="ni" onclick="nav('events')"><span class="ic">📅</span> All Events</a>
+      <a class="ni" onclick="nav('regs')"><span class="ic">📝</span> Registrations</a>
+      <a class="ni" onclick="nav('users')"><span class="ic">👤</span> Users</a>
+      <a class="ni" onclick="nav('res')"><span class="ic">📦</span> Resources</a>
+      <a class="ni" onclick="nav('reports')"><span class="ic">📈</span> Reports</a>
+      <div class="nl" style="margin-top:20px;">Other Portals</div>
+      <a class="ni" href="student-portal.html"><span class="ic">🎓</span> Student Portal</a>
+      <a class="ni" href="faculty-portal.html"><span class="ic">🏫</span> Faculty Portal</a>
+    </nav>
+    <div class="sb-foot">
+      <div class="uc">
+        <div class="uav">⚙️</div>
+        <div><div class="un" id="uname">—</div><div class="ur">Administrator</div></div>
+      </div>
+      <button class="btn-lo" onclick="doLogout()">Sign Out</button>
+    </div>
+  </aside>
+
+  <main class="main">
+
+    <!-- DASHBOARD -->
+    <div class="pg active" id="pg-dash">
+      <div class="ph">
+        <div class="ph-t"><h1>System Dashboard</h1><p>Complete overview of EventHub activity</p></div>
+        <button class="btn-rf" onclick="renderDash()">↻ Refresh</button>
+      </div>
+      <div class="srow">
+        <div class="sbox" style="--sc:var(--purple)"><div class="si">👥</div><div class="sv" id="d-us" style="color:var(--purple)">0</div><div class="sl">Total Users</div></div>
+        <div class="sbox" style="--sc:var(--blue)"><div class="si">📅</div><div class="sv" id="d-ev" style="color:var(--blue)">0</div><div class="sl">Total Events</div></div>
+        <div class="sbox" style="--sc:var(--success)"><div class="si">✅</div><div class="sv" id="d-rg" style="color:var(--success)">0</div><div class="sl">Registrations</div></div>
+        <div class="sbox" style="--sc:var(--warning)"><div class="si">⏳</div><div class="sv" id="d-pe" style="color:var(--warning)">0</div><div class="sl">Pending Approval</div></div>
+      </div>
+      <div class="tw">
+        <div class="tw-h">📋 Pending Events — Awaiting Your Approval</div>
+        <table>
+          <thead><tr><th>Event Title</th><th>Organizer</th><th>Date</th><th>Category</th><th>Budget</th><th>Actions</th></tr></thead>
+          <tbody id="pend-tb"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ALL EVENTS -->
+    <div class="pg" id="pg-events">
+      <div class="ph">
+        <div class="ph-t"><h1>All Events</h1><p>Every event submitted by faculty — approve, reject, or delete</p></div>
+        <button class="btn-rf" onclick="renderEvents()">↻ Refresh</button>
+      </div>
+      <div class="frow">
+        <button class="fb on" id="fa-all" onclick="setFilter('all')">All</button>
+        <button class="fb" id="fa-pending" onclick="setFilter('pending')">Pending</button>
+        <button class="fb" id="fa-approved" onclick="setFilter('approved')">Approved</button>
+        <button class="fb" id="fa-rejected" onclick="setFilter('rejected')">Rejected</button>
+      </div>
+      <div class="tw">
+        <table>
+          <thead><tr><th>Title</th><th>Organizer</th><th>Date</th><th>Location</th><th>Category</th><th>Registrations</th><th>Budget</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody id="ev-tb"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- REGISTRATIONS -->
+    <div class="pg" id="pg-regs">
+      <div class="ph">
+        <div class="ph-t"><h1>Student Registrations</h1><p>All student sign-ups across every event</p></div>
+        <button class="btn-rf" onclick="renderRegs()">↻ Refresh</button>
+      </div>
+      <div class="tw">
+        <table>
+          <thead><tr><th>Student</th><th>Event</th><th>Event Date</th><th>Organizer</th><th>Registered On</th></tr></thead>
+          <tbody id="rg-tb"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- USERS -->
+    <div class="pg" id="pg-users">
+      <div class="ph">
+        <div class="ph-t"><h1>User Management</h1><p>All registered system users</p></div>
+        <button class="btn-rf" onclick="renderUsers()">↻ Refresh</button>
+      </div>
+      <div class="tw">
+        <table>
+          <thead><tr><th>Name</th><th>Username</th><th>Email</th><th>Role</th><th>Status</th></tr></thead>
+          <tbody id="us-tb"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- RESOURCES -->
+    <div class="pg" id="pg-res">
+      <div class="ph">
+        <div class="ph-t"><h1>Resources &amp; Venues</h1><p>All faculty-submitted resources and venue reservations</p></div>
+        <button class="btn-rf" onclick="renderRes()">↻ Refresh</button>
+      </div>
+      <div class="tw">
+        <div class="tw-h">📦 Resources</div>
+        <table>
+          <thead><tr><th>Name</th><th>Type</th><th>Qty</th><th>Event</th><th>Added By</th><th>Actions</th></tr></thead>
+          <tbody id="rs-tb"></tbody>
+        </table>
+      </div>
+      <div class="tw mt">
+        <div class="tw-h">🙋 Volunteers</div>
+        <table>
+          <thead><tr><th>Name</th><th>Email</th><th>Event</th><th>Task</th><th>Actions</th></tr></thead>
+          <tbody id="vo-tb"></tbody>
+        </table>
+      </div>
+      <div class="tw mt">
+        <div class="tw-h">🏢 Venue Reservations</div>
+        <table>
+          <thead><tr><th>Venue</th><th>Event</th><th>Date</th><th>Capacity</th><th>Reserved By</th><th>Actions</th></tr></thead>
+          <tbody id="vn-tb"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- REPORTS -->
+    <div class="pg" id="pg-reports">
+      <div class="ph">
+        <div class="ph-t"><h1>Reports &amp; Analytics</h1><p>System-wide statistics and insights</p></div>
+        <button class="btn-rf" onclick="renderReports()">↻ Refresh</button>
+      </div>
+      <div class="rgrid">
+        <div class="rc-"><h4>Events by Status</h4><div id="rp-status"></div></div>
+        <div class="rc-"><h4>Events by Category</h4><div id="rp-cat"></div></div>
+        <div class="rc-"><h4>Top Events by Registrations</h4><div id="rp-top"></div></div>
+        <div class="rc-"><h4>User Distribution</h4><div id="rp-users"></div></div>
+        <div class="rc-"><h4>Faculty Activity</h4><div id="rp-org"></div></div>
+        <div class="rc-"><h4>Recent Feedback</h4><div id="rp-fb"></div></div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── STORAGE ──────────────────────────────────────────────────────────────────
+const SK={
+  EV:'eventhub_events',US:'eventhub_users',
+  RG:'eventhub_registrations',VO:'eventhub_volunteers',
+  RS:'eventhub_resources',VN:'eventhub_venues',FB:'eventhub_feedback'
+};
+const gd=(k,d)=>{try{const r=localStorage.getItem(k);return r?JSON.parse(r):d;}catch{return d;}};
+const sd=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
+const gdA=(k)=>gd(k,[]);
+
+function seed(){
+  if(!localStorage.getItem(SK.EV)) sd(SK.EV,[
+    {id:'evt_001',title:'Annual Tech Summit 2026',date:'2026-03-15',time:'09:00',location:'Main Auditorium',description:'Technology summit.',organizer:'faculty',organizerName:'Dr. Jane Faculty',category:'Academic',capacity:500,status:'pending',budget:50000,createdAt:'2026-02-01'},
+    {id:'evt_002',title:'Campus Fun Run 5K',date:'2026-03-22',time:'06:00',location:'Campus Grounds',description:'Community run.',organizer:'faculty',organizerName:'Dr. Jane Faculty',category:'Sports',capacity:200,status:'approved',budget:20000,createdAt:'2026-02-05'},
+    {id:'evt_003',title:'Cultural Night 2026',date:'2026-04-10',time:'18:00',location:'University Theater',description:'Cultural performances.',organizer:'faculty',organizerName:'Dr. Jane Faculty',category:'Cultural',capacity:300,status:'approved',budget:35000,createdAt:'2026-02-10'}
+  ]);
+  if(!localStorage.getItem(SK.US)) sd(SK.US,[
+    {username:'student',password:'123',role:'student',email:'student@uni.edu',name:'John Student',status:'active'},
+    {username:'student2',password:'123',role:'student',email:'student2@uni.edu',name:'Maria Santos',status:'active'},
+    {username:'faculty',password:'123',role:'faculty',email:'faculty@uni.edu',name:'Dr. Jane Faculty',status:'active'},
+    {username:'admin',password:'123',role:'admin',email:'admin@uni.edu',name:'Admin User',status:'active'}
+  ]);
+  [SK.RG,SK.VO,SK.RS,SK.VN,SK.FB].forEach(k=>{if(!localStorage.getItem(k))sd(k,[]);});
+}
+
+// ── HELPERS ───────────────────────────────────────────────────────────────────
+let CU=null;
+let evFilter='all';
+const regCnt=id=>gdA(SK.RG).filter(r=>r.eventId===id).length;
+const badge=(s)=>{const m={approved:'b-ap',pending:'b-pe',rejected:'b-re'};return`<span class="badge ${m[s]||'b-pe'}">${s}</span>`;};
+const roleBadge=r=>{const m={student:'b-st',faculty:'b-fa',admin:'b-ad'};return`<span class="badge ${m[r]||'b-bl'}">${r}</span>`;};
+const fmtBudget=n=>n?'₱'+parseInt(n).toLocaleString():'—';
+
+function toast(msg,type='ok'){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.className='toast '+type+' show';
+  setTimeout(()=>t.classList.remove('show'),3000);
+}
+
+// ── AUTH ──────────────────────────────────────────────────────────────────────
+function doLogin(){
+  const u=(document.getElementById('un').value||'').trim();
+  const p=(document.getElementById('pw').value||'').trim();
+  const err=document.getElementById('lerr');
+  err.textContent='';
+  if(!u||!p){err.textContent='Please fill both fields.';return;}
+  const user=gdA(SK.US).find(x=>x.username===u&&x.password===p&&x.role==='admin');
+  if(!user){err.textContent='Invalid credentials or not an admin account.';return;}
+  CU=user;
+  document.getElementById('login-screen').classList.add('hidden');
+  document.getElementById('app').classList.add('active');
+  document.getElementById('uname').textContent=CU.name;
+  renderDash();
+}
+function doLogout(){
+  CU=null;
+  document.getElementById('login-screen').classList.remove('hidden');
+  document.getElementById('app').classList.remove('active');
+  document.getElementById('un').value='';
+  document.getElementById('pw').value='';
+}
+
+// ── NAV ───────────────────────────────────────────────────────────────────────
+function nav(p){
+  document.querySelectorAll('.pg').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll('.ni').forEach(x=>x.classList.remove('active'));
+  document.getElementById('pg-'+p)?.classList.add('active');
+  document.querySelector(`[onclick="nav('${p}')"]`)?.classList.add('active');
+  const actions={dash:renderDash,events:renderEvents,regs:renderRegs,users:renderUsers,res:renderRes,reports:renderReports};
+  actions[p]?.();
+}
+
+// ── DASHBOARD ─────────────────────────────────────────────────────────────────
+function renderDash(){
+  const evs=gdA(SK.EV);
+  const users=gdA(SK.US);
+  const regs=gdA(SK.RG);
+  const pending=evs.filter(e=>e.status==='pending');
+  document.getElementById('d-us').textContent=users.length;
+  document.getElementById('d-ev').textContent=evs.length;
+  document.getElementById('d-rg').textContent=regs.length;
+  document.getElementById('d-pe').textContent=pending.length;
+  const tb=document.getElementById('pend-tb');
+  tb.innerHTML=pending.length
+    ?pending.map(e=>`<tr>
+        <td><strong>${e.title}</strong></td>
+        <td>${e.organizerName||e.organizer}</td>
+        <td>${e.date}</td><td>${e.category}</td>
+        <td>${fmtBudget(e.budget)}</td>
+        <td>
+          <button class="bsm bap" onclick="setStatus('${e.id}','approved')">✓ Approve</button>
+          <button class="bsm brj" onclick="setStatus('${e.id}','rejected')">✗ Reject</button>
+        </td>
+      </tr>`).join('')
+    :`<tr><td colspan="6" class="emp">✅ No pending events. All caught up!</td></tr>`;
+}
+
+// ── ALL EVENTS ────────────────────────────────────────────────────────────────
+function setFilter(f){
+  evFilter=f;
+  document.querySelectorAll('.fb').forEach(b=>b.classList.remove('on'));
+  document.getElementById('fa-'+f)?.classList.add('on');
+  renderEvents();
+}
+
+function renderEvents(){
+  let evs=gdA(SK.EV);
+  if(evFilter!=='all')evs=evs.filter(e=>e.status===evFilter);
+  const tb=document.getElementById('ev-tb');
+  tb.innerHTML=evs.length
+    ?evs.map(e=>`<tr>
+        <td><strong>${e.title}</strong></td>
+        <td>${e.organizerName||e.organizer}</td>
+        <td>${e.date}</td><td>${e.location}</td><td>${e.category}</td>
+        <td><span class="cnt">${regCnt(e.id)}/${e.capacity}</span></td>
+        <td>${fmtBudget(e.budget)}</td>
+        <td>${badge(e.status)}</td>
+        <td>
+          ${e.status==='pending'?`<button class="bsm bap" onclick="setStatus('${e.id}','approved')">Approve</button><button class="bsm brj" onclick="setStatus('${e.id}','rejected')">Reject</button>`:''}
+          ${e.status==='approved'?`<button class="bsm brj" onclick="setStatus('${e.id}','rejected')">Revoke</button>`:''}
+          ${e.status==='rejected'?`<button class="bsm bap" onclick="setStatus('${e.id}','approved')">Re-approve</button>`:''}
+          <button class="bsm bdl" onclick="delEvent('${e.id}')">Delete</button>
+        </td>
+      </tr>`).join('')
+    :`<tr><td colspan="9" class="emp">No events found for this filter.</td></tr>`;
+}
+
+function setStatus(id,status){
+  const evs=gdA(SK.EV);
+  const ev=evs.find(e=>e.id===id);
+  if(!ev)return;
+  ev.status=status;
+  sd(SK.EV,evs);
+  toast(`"${ev.title}" ${status}.`,status==='approved'?'ok':'wn');
+  renderDash();renderEvents();
+}
+
+function delEvent(id){
+  if(!confirm('Permanently delete this event?'))return;
+  sd(SK.EV,gdA(SK.EV).filter(e=>e.id!==id));
+  toast('Event deleted.','er');
+  renderEvents();renderDash();
+}
+
+// ── REGISTRATIONS ─────────────────────────────────────────────────────────────
+function renderRegs(){
+  const regs=gdA(SK.RG);
+  const evs=gdA(SK.EV);
+  const tb=document.getElementById('rg-tb');
+  tb.innerHTML=regs.length
+    ?regs.map(r=>{
+        const ev=evs.find(e=>e.id===r.eventId);
+        return`<tr>
+          <td>${r.studentName}</td>
+          <td>${r.eventTitle}</td>
+          <td>${r.eventDate}</td>
+          <td>${ev?ev.organizerName||ev.organizer:'—'}</td>
+          <td>${(r.registeredAt||'').split('T')[0]}</td>
+        </tr>`;
+      }).join('')
+    :`<tr><td colspan="5" class="emp">No student registrations yet.</td></tr>`;
+}
+
+// ── USERS ─────────────────────────────────────────────────────────────────────
+function renderUsers(){
+  const users=gdA(SK.US);
+  const tb=document.getElementById('us-tb');
+  tb.innerHTML=users.map(u=>`<tr>
+    <td><strong>${u.name}</strong></td>
+    <td><code>${u.username}</code></td>
+    <td>${u.email}</td>
+    <td>${roleBadge(u.role)}</td>
+    <td><span class="badge b-ap">${u.status||'active'}</span></td>
+  </tr>`).join('');
+}
+
+// ── RESOURCES ─────────────────────────────────────────────────────────────────
+function renderRes(){
+  const res=gdA(SK.RS);
+  const vols=gdA(SK.VO);
+  const ven=gdA(SK.VN);
+
+  const rs=document.getElementById('rs-tb');
+  rs.innerHTML=res.length
+    ?res.map(r=>`<tr>
+        <td>${r.name}</td><td>${r.type}</td><td>${r.qty}</td>
+        <td>${r.eventTitle}</td><td>${r.addedBy}</td>
+        <td><button class="bsm bdl" onclick="delRes('${r.id}')">Delete</button></td>
+      </tr>`).join('')
+    :`<tr><td colspan="6" class="emp">No resources yet.</td></tr>`;
+
+  const vt=document.getElementById('vo-tb');
+  vt.innerHTML=vols.length
+    ?vols.map(v=>`<tr>
+        <td>${v.name}</td><td>${v.email}</td>
+        <td>${v.eventTitle}</td><td>${v.task}</td>
+        <td><button class="bsm bdl" onclick="delVol('${v.id}')">Delete</button></td>
+      </tr>`).join('')
+    :`<tr><td colspan="5" class="emp">No volunteers yet.</td></tr>`;
+
+  const vn=document.getElementById('vn-tb');
+  vn.innerHTML=ven.length
+    ?ven.map(v=>`<tr>
+        <td>${v.name}</td><td>${v.eventTitle}</td>
+        <td>${v.date}</td><td>${v.capacity}</td><td>${v.reservedBy}</td>
+        <td><button class="bsm bdl" onclick="delVen('${v.id}')">Delete</button></td>
+      </tr>`).join('')
+    :`<tr><td colspan="6" class="emp">No venue reservations yet.</td></tr>`;
+}
+
+function delRes(id){if(!confirm('Delete resource?'))return;sd(SK.RS,gdA(SK.RS).filter(r=>r.id!==id));toast('Deleted.','er');renderRes();}
+function delVol(id){if(!confirm('Delete volunteer?'))return;sd(SK.VO,gdA(SK.VO).filter(v=>v.id!==id));toast('Deleted.','er');renderRes();}
+function delVen(id){if(!confirm('Delete reservation?'))return;sd(SK.VN,gdA(SK.VN).filter(v=>v.id!==id));toast('Deleted.','er');renderRes();}
+
+// ── REPORTS ───────────────────────────────────────────────────────────────────
+function renderReports(){
+  const evs=gdA(SK.EV);
+  const users=gdA(SK.US);
+  const regs=gdA(SK.RG);
+  const fb=gdA(SK.FB);
+
+  const ri=(label,val)=>`<div class="ri"><span>${label}</span><span class="rv">${val}</span></div>`;
+
+  // Status
+  document.getElementById('rp-status').innerHTML=
+    ['pending','approved','rejected'].map(s=>ri(s.charAt(0).toUpperCase()+s.slice(1),evs.filter(e=>e.status===s).length)).join('');
+
+  // Category
+  const cats=[...new Set(evs.map(e=>e.category))];
+  document.getElementById('rp-cat').innerHTML=
+    cats.length?cats.map(c=>ri(c,evs.filter(e=>e.category===c).length)).join(''):`<div class="ri" style="color:var(--muted)">No events yet.</div>`;
+
+  // Top events
+  const sorted=[...evs].map(e=>({...e,cnt:regCnt(e.id)})).sort((a,b)=>b.cnt-a.cnt).slice(0,5);
+  document.getElementById('rp-top').innerHTML=
+    sorted.length?sorted.map(e=>`<div class="ri"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:160px;">${e.title}</span><span class="rv">${e.cnt}</span></div>`).join('')
+    :`<div class="ri" style="color:var(--muted)">No registrations yet.</div>`;
+
+  // Users
+  document.getElementById('rp-users').innerHTML=
+    ['student','faculty','admin'].map(r=>ri(r.charAt(0).toUpperCase()+r.slice(1),users.filter(u=>u.role===r).length)).join('');
+
+  // Organizers
+  const orgMap={};
+  evs.forEach(e=>{const k=e.organizerName||e.organizer;orgMap[k]=(orgMap[k]||0)+1;});
+  document.getElementById('rp-org').innerHTML=
+    Object.keys(orgMap).length
+      ?Object.entries(orgMap).sort((a,b)=>b[1]-a[1]).map(([n,c])=>ri(n,c+' event'+(c!==1?'s':''))).join('')
+      :`<div class="ri" style="color:var(--muted)">No events yet.</div>`;
+
+  // Feedback
+  const recent=fb.slice(-5).reverse();
+  document.getElementById('rp-fb').innerHTML=
+    recent.length
+      ?recent.map(f=>{const ev=evs.find(e=>e.id===f.eventId);return`<div class="ri"><span>${ev?.title||'—'} ${'⭐'.repeat(f.rating||0)}</span><span style="color:var(--muted);font-size:11px;">${f.date}</span></div>`;}).join('')
+      :`<div class="ri" style="color:var(--muted)">No feedback yet.</div>`;
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded',()=>{
+  seed();
+  document.getElementById('pw').onkeydown=e=>{if(e.key==='Enter')doLogin();};
+  document.getElementById('un').onkeydown=e=>{if(e.key==='Enter')doLogin();};
+});
+</script>
+</body>
+</html>
